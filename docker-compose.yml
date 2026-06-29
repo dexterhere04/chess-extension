@@ -1,0 +1,84 @@
+services:
+  redis:
+    image: redis:7
+    container_name: gambitvoice-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+
+    volumes:
+      - redis_data:/data
+
+  livekit:
+    image: livekit/livekit-server:latest
+    container_name: gambitvoice-livekit
+    restart: unless-stopped
+
+    command: --config /etc/livekit.yaml
+
+    depends_on:
+      - redis
+
+    ports:
+      - "7880:7880"                 # HTTP/WebSocket API
+      - "7881:7881"                 # ICE/TCP
+      - "50000-50100:50000-50100/udp"
+
+    volumes:
+      - ./livekit.yaml:/etc/livekit.yaml:ro,Z
+
+  postgres:
+    image: postgres:17
+    container_name: gambitvoice-db
+    restart: unless-stopped
+
+    environment:
+      POSTGRES_USER: gambit
+      POSTGRES_PASSWORD: changeme
+      POSTGRES_DB: gambitvoice
+
+    ports:
+      - "5432:5432"
+
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U gambit -d gambitvoice"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+
+    container_name: gambitvoice-backend
+
+    restart: unless-stopped
+
+    depends_on:
+      postgres:
+        condition: service_healthy
+      livekit:
+        condition: service_started
+
+    environment:
+      DATABASE_URL: postgres://gambit:changeme@postgres:5432/gambitvoice?sslmode=disable
+      LIVEKIT_URL: ws://livekit:7880
+      LIVEKIT_API_KEY: devkey
+      LIVEKIT_API_SECRET: secret
+      CHOKIDAR_USEPOLLING: "true"
+
+    volumes:
+      - ./backend:/app:Z
+
+
+    command: pnpm dev
+
+    ports:
+      - "8080:8080"
+
+volumes:
+  redis_data:
+  postgres_data:
