@@ -143,5 +143,5 @@ The multi-stage `Dockerfile` produces a slim runtime image containing only produ
 <br>
 
 ## License
+[License: GPL v3](LICENCE)
 
-[MIT](https://github.com/anomalyco/GambitVoice/blob/main/LICENSE)
