@@ -1,17 +1,86 @@
-console.log("Gambit Voice content script loaded");
+function createControls(isSelf: boolean): HTMLDivElement {
+  const root = document.createElement("div");
 
-const badge = document.createElement("div");
+  root.className = "gambitvoice-controls";
 
-badge.textContent = "🎤 Gambit Voice";
+  Object.assign(root.style, {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginLeft: "auto",
+    flexShrink: "0",
+  });
 
-badge.style.position = "fixed";
-badge.style.bottom = "20px";
-badge.style.right = "20px";
-badge.style.zIndex = "999999";
-badge.style.background = "#0B3D2E";
-badge.style.color = "white";
-badge.style.padding = "8px 12px";
-badge.style.borderRadius = "8px";
-badge.style.fontFamily = "sans-serif";
+  const mic = document.createElement("button");
+  mic.textContent = "🎤";
 
-document.body.appendChild(badge);
+  const speaker = document.createElement("button");
+  speaker.textContent = "🔊";
+
+  [mic, speaker].forEach((btn) => {
+    Object.assign(btn.style, {
+      width: "28px",
+      height: "28px",
+      border: "none",
+      borderRadius: "9999px",
+      background: "#3b3b3b",
+      color: "white",
+      cursor: isSelf ? "pointer" : "default",
+      display: "flex",
+      alignItems: "center",
+      justifyContent: "center",
+      fontSize: "15px",
+      transition: "background .15s ease",
+    });
+
+    btn.addEventListener("mouseenter", () => {
+      btn.style.background = "#4a4a4a";
+    });
+
+    btn.addEventListener("mouseleave", () => {
+      btn.style.background = "#3b3b3b";
+    });
+  });
+
+  root.append(mic, speaker);
+
+  return root;
+}
+
+function inject() {
+  const topRow = document.querySelector(
+    "#board-layout-player-top .player-row-component"
+  ) as HTMLElement | null;
+
+  const bottomRow = document.querySelector(
+    "#board-layout-player-bottom .player-row-component"
+  ) as HTMLElement | null;
+
+  if (!topRow || !bottomRow) return;
+
+  // Ensure the row is a flex container
+  topRow.style.display = "flex";
+  topRow.style.alignItems = "center";
+
+  bottomRow.style.display = "flex";
+  bottomRow.style.alignItems = "center";
+
+  if (!topRow.querySelector(".gambitvoice-controls")) {
+    topRow.appendChild(createControls(false));
+  }
+
+  if (!bottomRow.querySelector(".gambitvoice-controls")) {
+    bottomRow.appendChild(createControls(true));
+  }
+}
+
+const observer = new MutationObserver(() => {
+  inject();
+});
+
+observer.observe(document.body, {
+  childList: true,
+  subtree: true,
+});
+
+inject();
